@@ -297,6 +297,10 @@ app.get("/messages/:channel_id", (req, res) => {
   );
 });
 
+app.get("/ping", (req, res) => {
+  res.send("Server is alive");
+});
+
 app.get("/server-members/:serverId", (req, res) => {
   const { serverId } = req.params;
 
@@ -346,11 +350,5 @@ app.get("/server-members/:serverId", (req, res) => {
   });
 });
 
-app.get("/api/test", async (req, res) => {
-  connection.query("SELECT 1", (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true, message: "Kết nối DB thành công!" });
-  });
-});
 const PORT = 5000;
 httpServer.listen(PORT, () => console.log(`🚀 Server chạy tại http://localhost:${PORT}`));
