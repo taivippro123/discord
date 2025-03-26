@@ -131,7 +131,7 @@ app.post("/create-server", checkAuth, (req, res) => {
 });
 
 // API Lấy mã mời của server
-app.get("/server-invite/:serverId", checkAuth, async (req, res) => {
+app.get("/server-invite/:serverId", async (req, res) => {
   const { serverId } = req.params;
 
   try {
