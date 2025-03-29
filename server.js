@@ -301,6 +301,21 @@ app.get("/ping", (req, res) => {
   res.send("Server is alive");
 });
 
+// Hàm giữ kết nối với database
+const keepAlive = () => {
+  setInterval(async () => {
+    try {
+      const [rows] = await pool.query("SELECT 1");
+      console.log("✅ Keep-alive query sent to database");
+    } catch (err) {
+      console.error("❌ Keep-alive query failed:", err.message);
+    }
+  }, 5 * 60 * 1000); // Mỗi 5 phút
+};
+
+// Gọi hàm giữ kết nối
+keepAlive();
+
 app.get("/server-members/:serverId", (req, res) => {
   const { serverId } = req.params;
 
