@@ -7,6 +7,9 @@ const { Server } = require("socket.io");
 const multer = require("multer");
 const cloudinary = require("./cloudinary");
 const fs = require("fs");
+const path = require("path");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 const httpServer = createServer(app);
@@ -91,7 +94,33 @@ db.connect((err) => {
 connectDB();
 
 // Cấu hình multer để lưu file tạm thời
-const upload = multer({ dest: "uploads/" });
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = "uploads/";
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir);
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    // Chỉ chấp nhận file ảnh và video
+    if (file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Chỉ hỗ trợ file ảnh hoặc video!"), false);
+    }
+  },
+});
 
 // API Đăng ký
 app.post("/register", (req, res) => {
@@ -418,6 +447,56 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
   } catch (error) {
     console.error("❌ Lỗi upload ảnh:", error);
     res.status(500).json({ message: "Lỗi upload ảnh" });
+  }
+});
+
+// API Upload video
+app.post("/upload-video", upload.single("video"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Không tìm thấy file video" });
+    }
+
+    // Upload video lên Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      resource_type: "video", // Chỉ định đây là video
+      folder: "videos", // Lưu trong folder videos
+    });
+
+    // Xóa file tạm sau khi upload
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      url: result.secure_url,
+      public_id: result.public_id,
+    });
+  } catch (error) {
+    console.error("❌ Lỗi upload video:", error);
+    // Xóa file tạm nếu có lỗi
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ message: "Lỗi khi upload video" });
+  }
+});
+
+// API Xóa video
+app.delete("/delete-video", async (req, res) => {
+  try {
+    const { public_id } = req.body;
+    if (!public_id) {
+      return res.status(400).json({ message: "Thiếu public_id" });
+    }
+
+    // Xóa video từ Cloudinary
+    await cloudinary.uploader.destroy(public_id, {
+      resource_type: "video",
+    });
+
+    res.json({ message: "Xóa video thành công" });
+  } catch (error) {
+    console.error("❌ Lỗi xóa video:", error);
+    res.status(500).json({ message: "Lỗi khi xóa video" });
   }
 });
 
