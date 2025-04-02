@@ -114,8 +114,23 @@ const upload = multer({
   },
   fileFilter: function (req, file, cb) {
     // Chỉ chấp nhận file ảnh và video
-    if (file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
+    if (file.mimetype.startsWith("image/")) {
       cb(null, true);
+    } else if (file.mimetype.startsWith("video/")) {
+      // Kiểm tra định dạng video được hỗ trợ
+      const allowedVideoTypes = [
+        'video/mp4',
+        'video/quicktime',
+        'video/x-msvideo',
+        'video/x-matroska',
+        'video/webm'
+      ];
+      
+      if (allowedVideoTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Định dạng video không được hỗ trợ. Vui lòng sử dụng MP4, MOV, AVI, MKV hoặc WEBM"), false);
+      }
     } else {
       cb(new Error("Chỉ hỗ trợ file ảnh hoặc video!"), false);
     }
@@ -457,10 +472,14 @@ app.post("/upload-video", upload.single("video"), async (req, res) => {
       return res.status(400).json({ message: "Không tìm thấy file video" });
     }
 
-    // Upload video lên Cloudinary
+    // Upload video lên Cloudinary với các tùy chọn để đảm bảo tương thích
     const result = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: "video", // Chỉ định đây là video
-      folder: "videos", // Lưu trong folder videos
+      resource_type: "video",
+      folder: "videos",
+      format: "mp4", // Chuyển đổi sang MP4
+      quality: "auto", // Tự động điều chỉnh chất lượng
+      fetch_format: "auto", // Tự động chọn định dạng phù hợp nhất
+      flags: "attachment", // Cho phép tải xuống
     });
 
     // Xóa file tạm sau khi upload
