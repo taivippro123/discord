@@ -4,6 +4,9 @@ const cors = require("cors");
 const session = require("express-session");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
+const multer = require("multer");
+const cloudinary = require("./cloudinary");
+const fs = require("fs");
 
 const app = express();
 const httpServer = createServer(app);
@@ -68,7 +71,7 @@ let db;
 const connectDB = () => {
   db = mysql.createConnection(dbConfig);
 
-  db.connect((err) => {
+db.connect((err) => {
     if (err) {
       console.error("❌ Lỗi kết nối DB:", err.message);
       setTimeout(connectDB, 5000); // Thử lại sau 5s nếu lỗi
@@ -86,6 +89,9 @@ const connectDB = () => {
 };
 
 connectDB();
+
+// Cấu hình multer để lưu file tạm thời
+const upload = multer({ dest: "uploads/" });
 
 // API Đăng ký
 app.post("/register", (req, res) => {
@@ -224,8 +230,8 @@ app.get("/servers/:user_id", checkAuth, (req, res) => {
   db.query(
     `SELECT servers.* FROM servers 
      JOIN server_members ON servers.id = server_members.server_id 
-     WHERE server_members.user_id = ?`,
-    [user_id],
+     WHERE server_members.user_id = ?`, 
+    [user_id], 
     (err, results) => {
       if (err) return res.status(500).json({ message: "Lỗi lấy danh sách server" });
       res.json(results);
@@ -277,7 +283,7 @@ app.post("/send", (req, res) => {
     "INSERT INTO messages (channel_id, user_id, content) VALUES (?, ?, ?)",
     [channel_id, user_id, content],
     (err, result) => {
-      if (err) return res.status(500).json({ message: "Lỗi gửi tin nhắn" });
+    if (err) return res.status(500).json({ message: "Lỗi gửi tin nhắn" });
       
       // Get the inserted message with user info
       db.query(
@@ -388,6 +394,31 @@ app.get("/server-members/:serverId", (req, res) => {
       res.json(members);
     });
   });
+});
+
+// API Upload ảnh lên Cloudinary
+app.post("/upload-image", upload.single("image"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: "Không có file nào được upload" });
+  }
+
+  try {
+    // Upload file lên Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "discord-clone/chat",
+    });
+
+    // Xóa file tạm sau khi upload
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      url: result.secure_url,
+      public_id: result.public_id,
+    });
+  } catch (error) {
+    console.error("❌ Lỗi upload ảnh:", error);
+    res.status(500).json({ message: "Lỗi upload ảnh" });
+  }
 });
 
 const PORT = 5000;
