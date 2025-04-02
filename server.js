@@ -421,5 +421,17 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
   }
 });
 
+// API Đăng xuất
+app.post("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("❌ Lỗi đăng xuất:", err);
+      return res.status(500).json({ message: "Lỗi đăng xuất" });
+    }
+    res.clearCookie("connect.sid"); // Xóa cookie session
+    res.json({ message: "Đăng xuất thành công" });
+  });
+});
+
 const PORT = 5000;
 httpServer.listen(PORT, () => console.log(`🚀 Server chạy tại http://localhost:${PORT}`));
