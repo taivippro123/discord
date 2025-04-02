@@ -482,11 +482,14 @@ app.post("/upload-video", upload.single("video"), async (req, res) => {
       flags: "attachment", // Cho phép tải xuống
     });
 
+    // Thêm f_auto vào URL video để đảm bảo tương thích với iOS
+    const videoUrl = result.secure_url.replace('/upload/', '/upload/f_auto/');
+
     // Xóa file tạm sau khi upload
     fs.unlinkSync(req.file.path);
 
     res.json({
-      url: result.secure_url,
+      url: videoUrl,
       public_id: result.public_id,
     });
   } catch (error) {
