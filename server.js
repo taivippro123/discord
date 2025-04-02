@@ -423,11 +423,14 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
 
 // API Đăng xuất
 app.post("/logout", (req, res) => {
-  // Xóa session
-  req.session.destroy((err) => {
-    if (err) {
-      console.error("❌ Lỗi đăng xuất:", err);
-      return res.status(500).json({ message: "Lỗi đăng xuất" });
+  try {
+    // Xóa session nếu có
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("❌ Lỗi xóa session:", err);
+        }
+      });
     }
     
     // Xóa cookie session
@@ -437,7 +440,10 @@ app.post("/logout", (req, res) => {
     res.clearCookie("token");
     
     res.json({ message: "Đăng xuất thành công" });
-  });
+  } catch (error) {
+    console.error("❌ Lỗi đăng xuất:", error);
+    res.status(500).json({ message: "Lỗi đăng xuất" });
+  }
 });
 
 const PORT = 5000;
