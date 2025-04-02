@@ -55,19 +55,37 @@ const generateInviteCode = () => {
   return Math.random().toString(36).substr(2, 6).toUpperCase();
 };
 
-// Kết nối database
-const db = mysql.createConnection({
+const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT
-});
+  port: process.env.DB_PORT,
+};
 
-db.connect((err) => {
-  if (err) console.error("Lỗi kết nối DB:", err);
-  else console.log("✅ Kết nối MySQL thành công!");
-});
+let db;
+
+const connectDB = () => {
+  db = mysql.createConnection(dbConfig);
+
+  db.connect((err) => {
+    if (err) {
+      console.error("❌ Lỗi kết nối DB:", err.message);
+      setTimeout(connectDB, 5000); // Thử lại sau 5s nếu lỗi
+    } else {
+      console.log("✅ Kết nối MySQL thành công!");
+    }
+  });
+
+  db.on("error", (err) => {
+    console.error("❌ Database error:", err.message);
+    if (err.code === "PROTOCOL_CONNECTION_LOST") {
+      connectDB(); // Reconnect nếu mất kết nối
+    }
+  });
+};
+
+connectDB();
 
 // API Đăng ký
 app.post("/register", (req, res) => {
@@ -311,6 +329,16 @@ const keepAlive = () => {
 };
 
 keepAlive();
+
+setInterval(() => {
+  db.query("SELECT 1", (err) => {
+    if (err) {
+      console.error("❌ Database connection lost:", err.message);
+    } else {
+      console.log("✅ Keep-alive query sent to database");
+    }
+  });
+}, 5 * 60 * 1000);
 
 
 app.get("/server-members/:serverId", (req, res) => {
