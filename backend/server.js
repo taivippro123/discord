@@ -8,7 +8,7 @@ const multer = require("multer");
 const cloudinary = require("./cloudinary");
 const fs = require("fs");
 const path = require("path");
-const bcrypt = require("bcrypt");
+const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken");
 
 const app = express();
