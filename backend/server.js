@@ -61,37 +61,18 @@ const generateInviteCode = () => {
   return Math.random().toString(36).substr(2, 6).toUpperCase();
 };
 
-const dbConfig = {
+const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
-};
+  port: process.env.DB_PORT || 3306,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
 
-let db;
-
-const connectDB = () => {
-  db = mysql.createConnection(dbConfig);
-
-db.connect((err) => {
-    if (err) {
-      console.error("❌ Lỗi kết nối DB:", err.message);
-      setTimeout(connectDB, 5000); // Thử lại sau 5s nếu lỗi
-    } else {
-      console.log("✅ Kết nối MySQL thành công!");
-    }
-  });
-
-  db.on("error", (err) => {
-    console.error("❌ Database error:", err.message);
-    if (err.code === "PROTOCOL_CONNECTION_LOST") {
-      connectDB(); // Reconnect nếu mất kết nối
-    }
-  });
-};
-
-connectDB();
+console.log("✅ MySQL connection pool initialized");
 
 // Cấu hình multer để lưu file tạm thời
 const storage = multer.diskStorage({
