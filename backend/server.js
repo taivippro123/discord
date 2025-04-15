@@ -365,8 +365,13 @@ app.get("/messages/:channel_id", (req, res) => {
   );
 });
 
-app.get("/ping", (req, res) => {
-  res.send("Server is alive");
+app.get("/ping", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT 1"); // Có gọi DB để hoạt động thật
+    res.send("Ping + DB OK");
+  } catch (error) {
+    res.status(500).send("Ping failed");
+  }
 });
 
 const keepAlive = () => {
