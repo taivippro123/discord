@@ -159,6 +159,10 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
       };
 
       setNewMessage(""); // Xóa input trước
+      const textarea = document.querySelector("textarea");
+      if (textarea) {
+        textarea.style.height = "auto"; // Reset lại chiều cao
+      }
 
       const response = await axios.post(`${API_BASE_URL}/send`, {
         channel_id: channel.id,
@@ -187,10 +191,10 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
     }
 
     // Kiểm tra loại file
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith("image/")) {
       setSelectedImage(file);
       handleUploadImage(file);
-    } else if (file.type.startsWith('video/')) {
+    } else if (file.type.startsWith("video/")) {
       handleUploadVideo(file);
     } else {
       alert("Chỉ hỗ trợ file ảnh hoặc video!");
@@ -385,14 +389,40 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
       );
     }
 
+    // Xử lý text với line breaks và links
+    const lines = content.split("\n");
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+
     return (
-      <p className="text-gray-300 break-words whitespace-pre-wrap">{content}</p>
+      <div className="text-gray-300 whitespace-pre-line leading-relaxed">
+        {lines.map((line, index) => (
+          <div key={index} className="min-h-[1.5em]">
+            {line.split(urlRegex).map((part, i) => {
+              if (part.match(urlRegex)) {
+                return (
+                  <a
+                    key={i}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 hover:underline"
+                  >
+                    {part}
+                  </a>
+                );
+              }
+              return part || "\u00A0";
+            })}
+          </div>
+        ))}
+      </div>
     );
   };
 
-  // Xử lý paste file
+  // Xử lý paste để giữ nguyên định dạng
   const handlePaste = async (e) => {
     const items = e.clipboardData.items;
+    let hasHandledMedia = false;
 
     for (let item of items) {
       if (item.type.indexOf("image") !== -1) {
@@ -403,7 +433,8 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
           return;
         }
         handleUploadImage(file);
-        return;
+        hasHandledMedia = true;
+        break;
       } else if (item.type.indexOf("video") !== -1) {
         e.preventDefault();
         const file = item.getAsFile();
@@ -412,7 +443,29 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
           return;
         }
         handleUploadVideo(file);
+        hasHandledMedia = true;
+        break;
+      }
+    }
+
+    // Nếu không phải media, giữ nguyên định dạng text
+    if (!hasHandledMedia) {
+      const text = e.clipboardData.getData("text");
+      e.preventDefault();
+      document.execCommand("insertText", false, text);
+    }
+  };
+
+  // Xử lý phím tắt
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        // Shift + Enter để xuống dòng
         return;
+      } else {
+        // Enter để gửi tin nhắn
+        e.preventDefault();
+        sendMessage();
       }
     }
   };
@@ -564,27 +617,27 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
 
       {/* Message input */}
       <div className="flex-shrink-0 p-4 bg-[#313338] border-t border-[#202225]">
-        <div 
+        <div
           className="flex items-center bg-[#383a40] rounded-lg p-2"
           onDragOver={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            e.currentTarget.classList.add('border-2', 'border-[#5865f2]');
+            e.currentTarget.classList.add("border-2", "border-[#5865f2]");
           }}
           onDragLeave={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            e.currentTarget.classList.remove('border-2', 'border-[#5865f2]');
+            e.currentTarget.classList.remove("border-2", "border-[#5865f2]");
           }}
           onDrop={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            e.currentTarget.classList.remove('border-2', 'border-[#5865f2]');
-            
+            e.currentTarget.classList.remove("border-2", "border-[#5865f2]");
+
             const files = Array.from(e.dataTransfer.files);
             if (files.length > 0) {
               const file = files[0];
-              
+
               // Kiểm tra kích thước file (10MB limit)
               if (file.size > 10 * 1024 * 1024) {
                 alert("File quá lớn. Vui lòng chọn file nhỏ hơn 10MB");
@@ -592,10 +645,10 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
               }
 
               // Kiểm tra loại file
-              if (file.type.startsWith('image/')) {
+              if (file.type.startsWith("image/")) {
                 setSelectedImage(file);
                 handleUploadImage(file);
-              } else if (file.type.startsWith('video/')) {
+              } else if (file.type.startsWith("video/")) {
                 handleUploadVideo(file);
               } else {
                 alert("Chỉ hỗ trợ file ảnh hoặc video!");
@@ -603,17 +656,27 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
             }
           }}
         >
-          <input
-            className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none"
-            type="text"
+          <textarea
+            className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none resize-none overflow-y-auto max-h-48"
             placeholder={
-              isConnected ? "Nhập tin nhắn hoặc kéo thả file vào đây..." : "Đang kết nối lại..."
+              isConnected
+                ? "Nhập tin nhắn hoặc kéo thả file vào đây..."
+                : "Đang kết nối lại..."
             }
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+            onChange={(e) => {
+              setNewMessage(e.target.value);
+
+              // Auto grow height
+              const textarea = e.target;
+              textarea.style.height = "auto";
+              textarea.style.height =
+                Math.min(textarea.scrollHeight, 12 * 24) + "px"; // 12 dòng (24px mỗi dòng)
+            }}
+            onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             disabled={!isConnected}
+            rows={1}
           />
 
           {/* Upload file button */}
