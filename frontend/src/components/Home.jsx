@@ -39,45 +39,79 @@ const Home = ({ setUser }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-96">
-        <h2 className="text-2xl font-bold text-center mb-4">{isRegister ? "Đăng Ký" : "Đăng Nhập"}</h2>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <input
-            className="p-3 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            type="text"
-            placeholder="Tên đăng nhập"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-          <input
-            className="p-3 bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            type="password"
-            placeholder="Mật khẩu"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+    <div className="min-h-screen w-full bg-[#5865F2] flex items-center justify-center p-4">
+      <div className="bg-[#313338] rounded-md shadow-xl w-full max-w-[480px] p-8">
+        <div className="text-center mb-10">
+          <h1 className="text-2xl font-bold text-white mb-2">
+            {isRegister ? "Tạo tài khoản" : "Chào mừng trở lại!"}
+          </h1>
+          <p className="text-[#B5BAC1] text-base">
+            {isRegister ? "Rất vui được gặp bạn!" : "Rất vui khi được gặp lại bạn!"}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-[#B5BAC1] uppercase">
+              {isRegister ? "TÊN ĐĂNG NHẬP" : "TÊN ĐĂNG NHẬP HOẶC EMAIL"}
+              {error && <span className="text-[#FA777C] ml-1">- {error}</span>}
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              className="w-full px-3 py-2 bg-[#1E1F22] text-white rounded-[3px] border border-[#1E1F22] focus:border-[#00A8FC] focus:outline-none transition-colors placeholder:text-[#87898C]"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-[#B5BAC1] uppercase">
+              MẬT KHẨU
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-3 py-2 bg-[#1E1F22] text-white rounded-[3px] border border-[#1E1F22] focus:border-[#00A8FC] focus:outline-none transition-colors placeholder:text-[#87898C]"
+            />
+          </div>
+
+          {!isRegister && (
+            <button type="button" className="text-[#00A8FC] text-sm hover:underline">
+              Quên mật khẩu?
+            </button>
+          )}
+
           <button
-            className={`p-3 rounded font-bold transition duration-300 ${
-              isRegister ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
-            }`}
             type="submit"
+            className="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white py-3 rounded-[3px] transition-colors font-medium text-base"
           >
-            {isRegister ? "Đăng Ký" : "Đăng Nhập"}
+            {isRegister ? "Tiếp tục" : "Đăng nhập"}
           </button>
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
+          <p className="text-[#949BA4] text-sm">
+            {isRegister ? "Đã có tài khoản?" : "Cần một tài khoản?"}{" "}
+            <button
+              type="button"
+              onClick={() => setIsRegister(!isRegister)}
+              className="text-[#00A8FC] hover:underline"
+            >
+              {isRegister ? "Đăng nhập" : "Đăng ký"}
+            </button>
+          </p>
         </form>
-        <p className="mt-4 text-center">
-          {isRegister ? "Đã có tài khoản?" : "Chưa có tài khoản?"}{" "}
-          <button
-            className="text-blue-400 hover:underline"
-            onClick={() => setIsRegister(!isRegister)}
-          >
-            {isRegister ? "Đăng nhập" : "Đăng ký"}
-          </button>
-        </p>
+
+        {!isRegister && (
+          <div className="mt-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[#3F4147]"></div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

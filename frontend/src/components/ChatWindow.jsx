@@ -472,16 +472,16 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
 
   if (!channel) {
     return (
-      <div className="flex flex-col h-full bg-[#313338] flex-1 min-w-[400px] max-w-[calc(100%-160px)]">
-        <p className="text-lg">🔹 Chọn một kênh để trò chuyện!</p>
+      <div className="flex flex-col h-full bg-[#313338] flex-1 overflow-x-hidden">
+        <p className="text-lg p-4">🔹 Chọn một kênh để trò chuyện!</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#36393F]">
+    <div className="flex flex-col h-full bg-[#36393F] overflow-x-hidden">
       {/* Header - Fixed at top */}
-      <div className="flex items-center justify-between px-4 h-14 bg-[#36393F] border-b border-[#202225] fixed top-0 left-0 right-0 z-10">
+      <div className="flex items-center justify-between px-4 h-14 bg-[#36393F] border-b border-[#202225] fixed top-0 w-full z-10">
         <div className="flex items-center space-x-2">
           <button
             onClick={onBack}
@@ -519,10 +519,10 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
         </button>
       </div>
 
-      {/* Messages container - Add padding top to account for fixed header */}
+      {/* Messages container */}
       <div
         ref={messageContainerRef}
-        className="flex-1 overflow-y-auto p-4 mt-14 w-full max-w-full
+        className="flex-1 overflow-y-auto overflow-x-hidden p-4 mt-14 w-full
           [&::-webkit-scrollbar]:w-2
           [&::-webkit-scrollbar-track]:bg-transparent
           [&::-webkit-scrollbar-thumb]:bg-[#202225]
@@ -531,7 +531,7 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
           [&::-webkit-scrollbar-thumb]:border-[#36393F]
           hover:[&::-webkit-scrollbar-thumb]:bg-[#2F3136]"
       >
-        <div className="flex flex-col justify-end min-h-full w-full max-w-full">
+        <div className="flex flex-col justify-end min-h-full w-full">
           {messages.length === 0 && (
             <div className="flex items-center justify-center flex-1 text-gray-400">
               <p>Chưa có tin nhắn nào trong kênh này</p>
@@ -616,9 +616,9 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
       )}
 
       {/* Message input */}
-      <div className="flex-shrink-0 p-4 bg-[#313338] border-t border-[#202225]">
+      <div className="flex-shrink-0 p-4 bg-[#313338] border-t border-[#202225] w-full">
         <div
-          className="flex items-center bg-[#383a40] rounded-lg p-2"
+          className="flex items-start bg-[#383a40] rounded-lg p-2 max-w-full"
           onDragOver={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -633,22 +633,20 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
             e.preventDefault();
             e.stopPropagation();
             e.currentTarget.classList.remove("border-2", "border-[#5865f2]");
-
+            
             const files = Array.from(e.dataTransfer.files);
             if (files.length > 0) {
               const file = files[0];
-
-              // Kiểm tra kích thước file (10MB limit)
+              
               if (file.size > 10 * 1024 * 1024) {
                 alert("File quá lớn. Vui lòng chọn file nhỏ hơn 10MB");
                 return;
               }
 
-              // Kiểm tra loại file
-              if (file.type.startsWith("image/")) {
+              if (file.type.startsWith('image/')) {
                 setSelectedImage(file);
                 handleUploadImage(file);
-              } else if (file.type.startsWith("video/")) {
+              } else if (file.type.startsWith('video/')) {
                 handleUploadVideo(file);
               } else {
                 alert("Chỉ hỗ trợ file ảnh hoặc video!");
@@ -657,21 +655,16 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
           }}
         >
           <textarea
-            className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none resize-none overflow-y-auto max-h-48"
+            className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none resize-none overflow-y-auto max-h-48 w-full"
             placeholder={
-              isConnected
-                ? "Nhập tin nhắn hoặc kéo thả file vào đây..."
-                : "Đang kết nối lại..."
+              isConnected ? "Nhập tin nhắn hoặc kéo thả file vào đây..." : "Đang kết nối lại..."
             }
             value={newMessage}
             onChange={(e) => {
               setNewMessage(e.target.value);
-
-              // Auto grow height
               const textarea = e.target;
               textarea.style.height = "auto";
-              textarea.style.height =
-                Math.min(textarea.scrollHeight, 12 * 24) + "px"; // 12 dòng (24px mỗi dòng)
+              textarea.style.height = Math.min(textarea.scrollHeight, 12 * 24) + "px";
             }}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
