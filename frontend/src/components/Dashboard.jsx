@@ -84,12 +84,18 @@ const Dashboard = ({ user }) => {
   };
 
   const handleBackToChannels = () => {
-    setShowSidebar(!showSidebar);
-    setShowChannelList(!showChannelList);
+    setShowSidebar(true);
+    setShowChannelList(true);
+    setShowMemberList(false); // Đóng member list khi mở server/channel list
   };
 
   const handleToggleMemberList = () => {
     setShowMemberList(!showMemberList);
+    // Đóng server/channel list khi mở member list
+    if (!showMemberList) {
+      setShowSidebar(false);
+      setShowChannelList(false);
+    }
   };
 
   const handleChannelSelect = (channel) => {
@@ -98,11 +104,29 @@ const Dashboard = ({ user }) => {
     setShowChatWindow(true);
     setShowSidebar(false);
     setShowChannelList(false);
+    setShowMemberList(false); // Đóng member list khi chọn channel
   };
 
   return (
     <>
       <div className="flex h-screen bg-[#36393F] text-white overflow-hidden">
+        {/* Overlay for mobile when sidebar is open */}
+        <div 
+          className={`md:hidden fixed inset-0 bg-black/50 z-10 transition-opacity duration-300
+            ${showSidebar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          onClick={() => {
+            setShowSidebar(false);
+            setShowChannelList(false);
+          }}
+        />
+
+        {/* Overlay for mobile when member list is open */}
+        <div 
+          className={`md:hidden fixed inset-0 bg-black/50 z-10 transition-opacity duration-300
+            ${showMemberList ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          onClick={() => setShowMemberList(false)}
+        />
+
         {/* Sidebar và Channel list container - fixed trên mobile, static trên desktop */}
         <div 
           className={`md:static md:translate-x-0 md:flex
@@ -125,18 +149,36 @@ const Dashboard = ({ user }) => {
 
         {/* Main chat area - full width trên mobile, thu hẹp trên desktop */}
         <div className="flex-1 flex min-w-0 relative">
-          {channels.length > 0 ? (
+          {server ? (
+            channels.length > 0 ? (
+              <div className="w-full">
+                <ChatWindow 
+                  channel={activeChannel} 
+                  user={user}
+                  onBack={handleBackToChannels}
+                  onToggleMemberList={handleToggleMemberList}
+                />
+              </div>
+            ) : (
+              <div className="w-full">
+                <ChatWindow 
+                  channel={null}
+                  user={user}
+                  onBack={handleBackToChannels}
+                  onToggleMemberList={handleToggleMemberList}
+                  customMessage="🔹 Tạo một kênh để trò chuyện!"
+                />
+              </div>
+            )
+          ) : (
             <div className="w-full">
               <ChatWindow 
-                channel={activeChannel} 
+                channel={null}
                 user={user}
                 onBack={handleBackToChannels}
                 onToggleMemberList={handleToggleMemberList}
+                customMessage="Không có server nào. Hãy tham gia hoặc tạo server mới!"
               />
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-[#313338] text-white p-4 text-center">
-              <p className="text-lg">🔹 Tạo một kênh để trò chuyện!</p>
             </div>
           )}
 
@@ -150,12 +192,6 @@ const Dashboard = ({ user }) => {
             <MemberList server={server} />
           </div>
         </div>
-
-        {!server && (
-          <div className="flex-1 flex items-center justify-center text-gray-400 p-4 text-center">
-            <p>Không có server nào. Hãy tham gia hoặc tạo server mới!</p>
-          </div>
-        )}
       </div>
       <div id="modal-root" className="fixed inset-0 pointer-events-none">
         {/* Modals sẽ được portal vào đây */}

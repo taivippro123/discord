@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
 import API_BASE_URL from "../config";
 import { useUserColors } from "../context/UserColorContext";
+import LoadingScreen from "./LoadingScreen";
 
-const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
+const ChatWindow = ({ channel, user, onBack, onToggleMemberList, customMessage }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [isConnected, setIsConnected] = useState(false);
@@ -13,12 +14,29 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const fileInputRef = useRef(null);
   const socketRef = useRef(null);
-  const messagesEndRef = useRef(null);
   const messageContainerRef = useRef(null);
   const [serverMembers, setServerMembers] = useState([]);
   const { userColorMap, setUserColors } = useUserColors();
+
+  // Hàm cuộn xuống cuối tin nhắn
+  const scrollToBottom = () => {
+    if (messageContainerRef.current) {
+      messageContainerRef.current.scrollTop = messageContainerRef.current.scrollHeight;
+    }
+  };
+
+  // Cuộn xuống cuối khi component mount hoặc có tin nhắn mới
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      scrollToBottom();
+      setIsLoading(false);
+    }, 1);
+
+    return () => clearTimeout(timer);
+  }, [messages]);
 
   // Fetch server members and set up colors
   useEffect(() => {
@@ -30,7 +48,7 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
           `${API_BASE_URL}/server-members/${channel.server_id}`
         );
         setServerMembers(response.data);
-        setUserColors(response.data); // Set colors for all members
+        setUserColors(response.data);
       } catch (error) {
         console.error("Error fetching members:", error);
       }
@@ -63,23 +81,7 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
     return () => document.removeEventListener("click", handleClickOutside);
   }, [memberInfo]);
 
-  // 🟢 Hàm cuộn xuống cuối tin nhắn (chỉ khi người dùng đang ở gần đáy)
-  const scrollToBottom = useCallback((force = false) => {
-    if (!messageContainerRef.current) return;
-
-    const container = messageContainerRef.current;
-    const isScrolledNearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight <
-      150;
-
-    if (force || isScrolledNearBottom) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 50); // Delay nhẹ để đảm bảo UI đã update
-    }
-  }, []);
-
-  // 🔗 Khởi tạo kết nối socket
+  // Initialize socket connection
   useEffect(() => {
     socketRef.current = io(API_BASE_URL, {
       withCredentials: true,
@@ -96,7 +98,7 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
     };
   }, []);
 
-  // 🟡 Xử lý join channel + lắng nghe tin nhắn mới
+  // Handle channel join and message listening
   useEffect(() => {
     if (!channel || !socketRef.current) return;
 
@@ -107,7 +109,6 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
         ...prev,
         { ...message, created_at: formatDate(message.created_at) },
       ]);
-      scrollToBottom(false); // Chỉ cuộn nếu người dùng không đang đọc tin nhắn cũ
     };
 
     socketRef.current.on("new-message", handleNewMessage);
@@ -121,9 +122,8 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
             created_at: formatDate(msg.created_at),
           }))
         );
-        scrollToBottom(true); // Luôn cuộn xuống khi load tin nhắn cũ
       } catch (error) {
-        console.error("⚠️ Error fetching messages:", error);
+        console.error("Error fetching messages:", error);
       }
     };
 
@@ -133,9 +133,9 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
       socketRef.current.emit("leave-channel", channel.id);
       socketRef.current.off("new-message", handleNewMessage);
     };
-  }, [channel, scrollToBottom]);
+  }, [channel]);
 
-  // 📝 Format ngày giờ cho tin nhắn
+  // Format date for messages
   const formatDate = (isoString) => {
     const date = new Date(isoString);
     return `${String(date.getDate()).padStart(2, "0")}/${String(
@@ -145,7 +145,7 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
     ).padStart(2, "0")}`;
   };
 
-  // ✉️ Gửi tin nhắn
+  // Send message
   const sendMessage = async () => {
     if (!newMessage.trim() || !channel || !user) return;
 
@@ -158,10 +158,10 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
         created_at: new Date().toISOString(),
       };
 
-      setNewMessage(""); // Xóa input trước
+      setNewMessage("");
       const textarea = document.querySelector("textarea");
       if (textarea) {
-        textarea.style.height = "auto"; // Reset lại chiều cao
+        textarea.style.height = "auto";
       }
 
       const response = await axios.post(`${API_BASE_URL}/send`, {
@@ -172,25 +172,22 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
 
       if (response.data.success) {
         socketRef.current.emit("send-message", messageData);
-        setTimeout(() => scrollToBottom(true), 100); // Cuộn xuống khi gửi tin
       }
     } catch (error) {
-      console.error("❌ Error sending message:", error);
+      console.error("Error sending message:", error);
     }
   };
 
-  // Xử lý chọn file (ảnh hoặc video)
+  // Handle file selection
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Kiểm tra kích thước file (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
       alert("File quá lớn. Vui lòng chọn file nhỏ hơn 10MB");
       return;
     }
 
-    // Kiểm tra loại file
     if (file.type.startsWith("image/")) {
       setSelectedImage(file);
       handleUploadImage(file);
@@ -201,7 +198,7 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
     }
   };
 
-  // Upload ảnh lên server
+  // Upload image
   const handleUploadImage = async (file) => {
     setIsUploading(true);
     setUploadProgress(0);
@@ -226,7 +223,6 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
         }
       );
 
-      // Gửi tin nhắn với ảnh
       const messageData = {
         channel_id: channel.id,
         user_id: user.id,
@@ -243,11 +239,10 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
 
       if (msgResponse.data.success) {
         socketRef.current.emit("send-message", messageData);
-        setTimeout(() => scrollToBottom(true), 100);
       }
     } catch (error) {
-      console.error("❌ Lỗi upload ảnh:", error);
-      alert("Lỗi khi upload ảnh");
+      console.error("Error uploading image:", error);
+      alert("Error uploading image");
     } finally {
       setIsUploading(false);
       setSelectedImage(null);
@@ -255,7 +250,7 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
     }
   };
 
-  // Upload video lên server
+  // Upload video
   const handleUploadVideo = async (file) => {
     setIsUploading(true);
     setUploadProgress(0);
@@ -280,7 +275,6 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
         }
       );
 
-      // Gửi tin nhắn với video
       const messageData = {
         channel_id: channel.id,
         user_id: user.id,
@@ -297,11 +291,10 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
 
       if (msgResponse.data.success) {
         socketRef.current.emit("send-message", messageData);
-        setTimeout(() => scrollToBottom(true), 100);
       }
     } catch (error) {
-      console.error("❌ Lỗi upload video:", error);
-      alert("Lỗi khi upload video");
+      console.error("Error uploading video:", error);
+      alert("Error uploading video");
     } finally {
       setIsUploading(false);
       setSelectedImage(null);
@@ -309,9 +302,8 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
     }
   };
 
-  // Render tin nhắn với hỗ trợ hiển thị ảnh và video
+  // Render message content
   const renderMessageContent = (content) => {
-    // Kiểm tra Markdown image (định dạng `![image](URL)`)
     const markdownImageRegex = /!\[image]\((.*?)\)/;
     const markdownImageMatch = content.match(markdownImageRegex);
 
@@ -328,7 +320,6 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
       );
     }
 
-    // Kiểm tra Markdown video (định dạng `![video](URL)`)
     const markdownVideoRegex = /!\[video]\((.*?)\)/;
     const markdownVideoMatch = content.match(markdownVideoRegex);
 
@@ -350,7 +341,6 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
       );
     }
 
-    // Kiểm tra nếu nội dung chứa URL ảnh trực tiếp
     const imageUrlRegex = /(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp))/i;
     const imageMatch = content.match(imageUrlRegex);
 
@@ -367,7 +357,6 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
       );
     }
 
-    // Kiểm tra nếu nội dung chứa URL video trực tiếp
     const videoUrlRegex = /(https?:\/\/.*\.(?:mp4|webm|ogg))/i;
     const videoMatch = content.match(videoUrlRegex);
 
@@ -389,7 +378,6 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
       );
     }
 
-    // Xử lý text với line breaks và links
     const lines = content.split("\n");
     const urlRegex = /(https?:\/\/[^\s]+)/g;
 
@@ -419,7 +407,7 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
     );
   };
 
-  // Xử lý paste để giữ nguyên định dạng
+  // Handle paste
   const handlePaste = async (e) => {
     const items = e.clipboardData.items;
     let hasHandledMedia = false;
@@ -448,7 +436,6 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
       }
     }
 
-    // Nếu không phải media, giữ nguyên định dạng text
     if (!hasHandledMedia) {
       const text = e.clipboardData.getData("text");
       e.preventDefault();
@@ -456,14 +443,12 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
     }
   };
 
-  // Xử lý phím tắt
+  // Handle keyboard shortcuts
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       if (e.shiftKey) {
-        // Shift + Enter để xuống dòng
         return;
       } else {
-        // Enter để gửi tin nhắn
         e.preventDefault();
         sendMessage();
       }
@@ -473,15 +458,54 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
   if (!channel) {
     return (
       <div className="flex flex-col h-full bg-[#313338] flex-1 overflow-x-hidden">
-        <p className="text-lg p-4">🔹 Chọn một kênh để trò chuyện!</p>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 h-14 bg-[#36393F] border-b border-[#202225] fixed top-0 w-full z-10">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={onBack}
+              className="md:hidden text-gray-400 hover:text-white p-2 rounded hover:bg-[#40444B]"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+          <button
+            onClick={onToggleMemberList}
+            className="text-gray-400 hover:text-white p-2 rounded hover:bg-[#40444B]"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4 text-center mt-14">
+          <p className="text-lg text-gray-300">{customMessage || "🔹 Chọn một kênh để trò chuyện!"}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#36393F] overflow-x-hidden">
-      {/* Header - Fixed at top */}
-      <div className="flex items-center justify-between px-4 h-14 bg-[#36393F] border-b border-[#202225] fixed top-0 w-full z-10">
+    <div className="flex flex-col h-full md:h-screen bg-[#36393F] overflow-hidden relative md:static touch-none overscroll-none">
+      {isLoading && <LoadingScreen />}
+      
+      {/* Header - fixed */}
+      <div className="flex-none flex items-center justify-between px-4 h-14 bg-[#36393F] border-b border-[#202225] z-10 touch-none">
         <div className="flex items-center space-x-2">
           <button
             onClick={onBack}
@@ -519,10 +543,10 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
         </button>
       </div>
 
-      {/* Messages container */}
+      {/* Messages container - scrollable */}
       <div
         ref={messageContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden p-4 mt-14 w-full
+        className="flex-1 overflow-y-auto overflow-x-hidden p-4 w-full overscroll-contain
           [&::-webkit-scrollbar]:w-2
           [&::-webkit-scrollbar-track]:bg-transparent
           [&::-webkit-scrollbar-thumb]:bg-[#202225]
@@ -531,7 +555,7 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
           [&::-webkit-scrollbar-thumb]:border-[#36393F]
           hover:[&::-webkit-scrollbar-thumb]:bg-[#2F3136]"
       >
-        <div className="flex flex-col justify-end min-h-full w-full">
+        <div className="flex flex-col w-full">
           {messages.length === 0 && (
             <div className="flex items-center justify-center flex-1 text-gray-400">
               <p>Chưa có tin nhắn nào trong kênh này</p>
@@ -569,54 +593,11 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
               </div>
             </div>
           ))}
-          <div ref={messagesEndRef} className="h-2" />
         </div>
       </div>
 
-      {/* Member info tooltip */}
-      {memberInfo && (
-        <div
-          className="fixed bg-[#18191c] text-white rounded-md shadow-lg p-3 z-50 w-64"
-          style={{
-            top: tooltipPosition.y + 5,
-            left: tooltipPosition.x,
-            transform: "translateX(-50%)",
-          }}
-        >
-          <div className="flex items-center space-x-3 mb-2">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-medium"
-              style={{
-                backgroundColor: userColorMap[memberInfo.username] || "#5865F2",
-              }}
-            >
-              {memberInfo.username.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div
-                className="font-semibold"
-                style={{
-                  color: userColorMap[memberInfo.username] || "#ffffff",
-                }}
-              >
-                {memberInfo.username}
-              </div>
-              <div className="text-xs text-gray-400">
-                {memberInfo.is_owner ? "Chủ sở hữu" : "Thành viên"}
-              </div>
-            </div>
-          </div>
-          <div className="text-xs text-gray-400 mt-2">
-            <div className="flex justify-between">
-              <span>Tham gia ngày:</span>
-              <span>{memberInfo.joined_at}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Message input */}
-      <div className="flex-shrink-0 p-4 bg-[#313338] border-t border-[#202225] w-full">
+      {/* Message input - fixed */}
+      <div className="flex-none p-4 bg-[#313338] border-t border-[#202225] w-full touch-none">
         <div
           className="flex items-start bg-[#383a40] rounded-lg p-2 max-w-full"
           onDragOver={(e) => {
@@ -720,6 +701,62 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList }) => {
           </div>
         )}
       </div>
+
+      {/* Member info tooltip */}
+      {memberInfo && (
+        <div
+          className="fixed bg-[#18191c] text-white rounded-md shadow-lg p-3 z-50 w-64"
+          style={{
+            top: tooltipPosition.y + 5,
+            left: tooltipPosition.x,
+            transform: window.innerWidth <= 768 ? 'none' : 'translateX(-50%)',
+            maxWidth: window.innerWidth <= 768 ? 'calc(100vw - 32px)' : '16rem',
+            right: window.innerWidth <= 768 ? '16px' : 'auto'
+          }}
+        >
+          <div className="flex items-center space-x-3 mb-2">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-medium"
+              style={{
+                backgroundColor: userColorMap[memberInfo.username] || "#5865F2",
+              }}
+            >
+              {memberInfo.username.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div
+                className="font-semibold"
+                style={{
+                  color: userColorMap[memberInfo.username] || "#ffffff",
+                }}
+              >
+                {memberInfo.username}
+              </div>
+              <div className="text-xs text-gray-400">
+                {memberInfo.is_owner ? "Chủ sở hữu" : "Thành viên"}
+              </div>
+            </div>
+          </div>
+          <div className="text-xs text-gray-400 mt-2">
+            <div className="flex justify-between">
+              <span>Tham gia ngày:</span>
+              <span>{memberInfo.joined_at}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        @media (max-width: 768px) {
+          body {
+            overscroll-behavior: none;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+          }
+        }
+      `}</style>
     </div>
   );
 };

@@ -15,8 +15,14 @@ export const getTestData = async () => {
 
 const Modal = ({ children, onClose }) => {
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="relative" onClick={e => e.stopPropagation()}>
+    <div 
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn" 
+      onClick={onClose}
+    >
+      <div 
+        className="relative transform transition-all duration-200 ease-out animate-scaleIn" 
+        onClick={e => e.stopPropagation()}
+      >
         {children}
       </div>
     </div>,
@@ -90,7 +96,7 @@ const ChannelList = ({ server, onSelectChannel }) => {
   return (
     <div className="h-full bg-[#2F3136] flex flex-col">
       {/* Header Server */}
-      <div className="flex items-center justify-between p-4 border-b border-[#202225]">
+      <div className="flex items-center justify-between h-14 px-4 border-b border-[#202225]">
         <h2 className="text-base font-semibold text-white truncate flex-1">
           {server?.name || "Chưa có server!"}
         </h2>
@@ -152,24 +158,24 @@ const ChannelList = ({ server, onSelectChannel }) => {
       {/* Modal tạo kênh mới */}
       {showCreateChannel && (
         <Modal onClose={() => setShowCreateChannel(false)}>
-          <div className="bg-[#313338] p-6 rounded-lg w-full max-w-sm mx-4 text-white shadow-lg">
+          <div className="bg-[#313338]/90 backdrop-blur-md p-6 rounded-xl w-full max-w-sm mx-4 text-white shadow-2xl border border-white/10">
             <h3 className="text-lg font-bold mb-4">Tạo Kênh Mới</h3>
             <input
               type="text"
-              className="w-full p-2 mb-4 bg-[#1e1f22] rounded outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 mb-4 bg-[#1e1f22]/90 backdrop-blur-sm rounded-lg outline-none border border-white/10 focus:border-blue-500/50 transition-colors duration-200"
               placeholder="Nhập tên kênh..."
               value={newChannelName}
               onChange={(e) => setNewChannelName(e.target.value)}
             />
             <div className="flex justify-end space-x-2">
               <button
-                className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
+                className="px-4 py-2 bg-gray-600/80 backdrop-blur-sm rounded-lg hover:bg-gray-700/80 transition-colors duration-200"
                 onClick={() => setShowCreateChannel(false)}
               >
                 Hủy
               </button>
               <button
-                className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600/90 backdrop-blur-sm rounded-lg hover:bg-blue-700/90 transition-colors duration-200"
                 onClick={handleCreateChannel}
               >
                 Tạo Kênh

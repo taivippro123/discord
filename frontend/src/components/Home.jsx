@@ -39,7 +39,7 @@ const Home = ({ setUser }) => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#5865F2] flex items-center justify-center p-4">
+    <div className="fixed inset-0 w-full bg-[#5865F2] flex items-center justify-center p-4 touch-none overscroll-none">
       <div className="bg-[#313338] rounded-md shadow-xl w-full max-w-[480px] p-8">
         <div className="text-center mb-10">
           <h1 className="text-2xl font-bold text-white mb-2">
@@ -113,6 +113,17 @@ const Home = ({ setUser }) => {
           </div>
         )}
       </div>
+
+      <style jsx global>{`
+        body {
+          overscroll-behavior: none;
+          overflow: hidden;
+          position: fixed;
+          width: 100%;
+          height: 100%;
+          background-color: #5865F2;
+        }
+      `}</style>
     </div>
   );
 };
