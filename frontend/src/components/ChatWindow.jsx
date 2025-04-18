@@ -501,7 +501,7 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList, customMessage }
   }
 
   return (
-    <div className="flex flex-col h-full md:h-screen bg-[#36393F] overflow-hidden relative md:static touch-none overscroll-none">
+    <div className="flex flex-col h-full md:h-screen bg-[#36393F] overflow-hidden md:relative fixed inset-0 touch-none overscroll-none">
       {isLoading && <LoadingScreen />}
       
       {/* Header - fixed */}
@@ -530,7 +530,7 @@ const ChatWindow = ({ channel, user, onBack, onToggleMemberList, customMessage }
         </div>
         <button
           onClick={onToggleMemberList}
-          className="text-gray-400 hover:text-white p-2 rounded hover:bg-[#40444B]"
+          className="text-gray-400 hover:text-white p-2 rounded hover:bg-[#40444B] md:hidden"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
