@@ -44,7 +44,7 @@ const Sidebar = ({ user, setActiveServer }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
-
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // Tạo axios instance với headers mặc định
   const axiosInstance = axios.create({
     withCredentials: true,
@@ -98,6 +98,22 @@ const Sidebar = ({ user, setActiveServer }) => {
         "Lỗi khi tạo server: " +
           (error.response?.data?.message || "Không rõ lỗi")
       );
+    }
+  };
+
+  const confirmLogout = async () => {
+    try {
+      await axiosInstance.post(`${API_BASE_URL}/logout`);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.reload();
+      setTimeout(() => navigate("/dashboard"), 100);
+    } catch (error) {
+      console.error("❌ Lỗi đăng xuất:", error);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.reload();
+      setTimeout(() => navigate("/dashboard"), 10);
     }
   };
 
@@ -289,8 +305,15 @@ const Sidebar = ({ user, setActiveServer }) => {
       </div>
 
       {/* Server list với scrollbar tùy chỉnh */}
-      <div className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden px-2 custom-scrollbar">
-        <div className="flex flex-col items-center w-full mt-6">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden
+        [&::-webkit-scrollbar]:w-2
+        [&::-webkit-scrollbar-track]:bg-transparent
+        [&::-webkit-scrollbar-thumb]:bg-[#202225]
+        [&::-webkit-scrollbar-thumb]:rounded-full
+        [&::-webkit-scrollbar-thumb]:border-2
+        [&::-webkit-scrollbar-thumb]:border-[#36393F]
+        hover:[&::-webkit-scrollbar-thumb]:bg-[#2F3136]">
+        <div className="flex flex-col items-center p-2">
           {servers.map((server) => (
             <div
               key={server.id}
@@ -322,52 +345,75 @@ const Sidebar = ({ user, setActiveServer }) => {
       </div>
 
       {/* Logout button - cố định dưới cùng */}
-      <div className="flex-none p-4">
-        <div className="relative group cursor-pointer">
-          <div
-            className="w-12 h-12 rounded-[24px] bg-[#36393F] flex items-center justify-center text-[#DCDDDE] hover:rounded-[16px] transition-all duration-200 ease-out group-hover:bg-[#ED4245]"
-            onClick={handleLogout}
+      <div className="flex-none p-2 flex items-center justify-center">
+        <button
+          className="w-12 h-12 bg-[#313338] text-white text-xl font-bold rounded-full flex items-center justify-center hover:bg-red-500 transition-all"
+          onClick={() => setShowLogoutConfirm(true)}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-          </div>
-        </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+            />
+          </svg>
+        </button>
       </div>
+
+      {/* Modal confirm logout */}
+      {showLogoutConfirm && (
+        <Modal onClose={() => setShowLogoutConfirm(false)}>
+          <div className="bg-[#313338]/90 backdrop-blur-md p-8 rounded-xl w-80 text-white shadow-2xl border border-white/10 text-center">
+            <h3 className="text-xl font-bold mb-4">Đăng xuất?</h3>
+            <p className="mb-6 text-gray-300">
+              Bạn có chắc chắn muốn đăng xuất?
+            </p>
+            <div className="flex justify-center space-x-4">
+              <button
+                className="px-5 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 transition"
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                Hủy
+              </button>
+              <button
+                className="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-700 transition"
+                onClick={confirmLogout}
+              >
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {renderModal()}
 
-      <style jsx>{`
+      {/* <style jsx>{`
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: #202225 transparent;
+        }
         .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
+          width: 2px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: #202225;
-          border-radius: 4px;
+          border-radius: 2px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #2f3136;
         }
-        .custom-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: #202225 transparent;
-          -ms-overflow-style: none;
-        }
-      `}</style>
+      `}</style> */}
     </div>
   );
 };
