@@ -24,7 +24,7 @@ const io = new Server(httpServer, {
 app.use(express.json());
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://frontend-theta-two-64.vercel.app"],
+    origin: ["http://localhost:5173", "https://discord-tau-five.vercel.app"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
