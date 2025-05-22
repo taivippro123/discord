@@ -1,4 +1,4 @@
-🔗 [Demo](https://frontend-theta-two-64.vercel.app/dashboard)
+🔗 [Demo](https://discord-tau-five.vercel.app/)
 
 ## 💬 Discord Clone
 
